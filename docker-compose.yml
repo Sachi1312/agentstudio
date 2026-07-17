@@ -1,0 +1,9 @@
+services:
+  agentstudio:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    # Run history (runs.db) lives inside the container and resets on
+    # rebuild. Bind-mount a file here if you want it to persist.

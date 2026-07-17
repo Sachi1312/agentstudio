@@ -1,25 +1,70 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 import axios from 'axios'
+import { API_BASE } from '../lib/api'
+
+function relativeDay(iso) {
+  const diffDays = Math.floor((new Date() - new Date(iso)) / 86400000)
+  if (diffDays <= 0) return 'today'
+  if (diffDays === 1) return 'yesterday'
+  return `${diffDays} days ago`
+}
 
 export default function Home() {
   const [topic, setTopic] = useState('')
   const [language, setLanguage] = useState('English')
   const [loading, setLoading] = useState(false)
+  const [runs, setRuns] = useState([])
+  const [error, setError] = useState('')
   const navigate = useNavigate()
+
+  useEffect(() => {
+    loadRuns()
+  }, [])
+
+  const loadRuns = () => {
+    axios.get(`${API_BASE}/runs`)
+      .then(res => setRuns(res.data))
+      .catch(() => setRuns([]))
+  }
+
+  const totalRuns = runs.length
+  const scored = runs.filter(r => r.score !== null && r.score !== undefined)
+  const avgScore = scored.length
+    ? (scored.reduce((sum, r) => sum + r.score, 0) / scored.length).toFixed(1)
+    : '—'
 
   const handleStart = async () => {
     if (!topic.trim()) return
     setLoading(true)
+    setError('')
     try {
-      const res = await axios.post('http://localhost:8000/start', {
+      const res = await axios.post(`${API_BASE}/start`, {
         topic,
         language
       })
-      navigate(`/run/${res.data.thread_id}`)
+      navigate(`/run/${res.data.thread_id}`, { state: { topic: res.data.topic } })
     } catch (err) {
       console.error(err)
+      if (err.code === 'ERR_NETWORK') {
+        setError("Can't reach the backend — make sure it's running.")
+      } else if (err.response?.status === 429) {
+        setError(err.response.data?.detail || 'Too many runs in progress. Try again shortly.')
+      } else {
+        setError('Failed to start research. Please try again.')
+      }
       setLoading(false)
+    }
+  }
+
+  const handleDelete = async (e, threadId) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setRuns(prev => prev.filter(r => r.thread_id !== threadId))
+    try {
+      await axios.delete(`${API_BASE}/runs/${threadId}`)
+    } catch {
+      loadRuns()
     }
   }
 
@@ -27,7 +72,7 @@ export default function Home() {
     <div className="min-h-screen bg-beige-50 font-dm">
 
       {/* Nav */}
-      <nav className="border-b border-beige-300 px-8 h-14 flex items-center justify-between">
+      <nav className="border-b border-beige-300 px-4 sm:px-8 h-14 flex items-center justify-between">
         <span className="font-playfair text-lg text-beige-900">
           agent<em className="text-beige-500">studio</em>
         </span>
@@ -39,14 +84,14 @@ export default function Home() {
       </nav>
 
       {/* Hero */}
-      <div className="border-b border-beige-300 px-12 py-12">
+      <div className="border-b border-beige-300 px-4 sm:px-12 py-8 sm:py-12">
         <p className="text-xs font-mono text-beige-500 tracking-widest uppercase mb-4">
           Multi-agent research system
         </p>
-        <h1 className="font-playfair text-4xl text-beige-900 font-normal leading-tight mb-8 max-w-xl">
+        <h1 className="font-playfair text-3xl sm:text-4xl text-beige-900 font-normal leading-tight mb-8 max-w-xl">
           What do you want to <em className="text-beige-600">research</em> today?
         </h1>
-        <div className="flex gap-3 max-w-2xl">
+        <div className="flex flex-col sm:flex-row gap-3 max-w-2xl">
           <input
             type="text"
             value={topic}
@@ -55,92 +100,80 @@ export default function Home() {
             placeholder="e.g. Impact of AI on jobs, Climate policy in 2025..."
             className="flex-1 bg-beige-50 border border-beige-400 rounded-xl px-4 py-3 text-sm text-beige-900 outline-none focus:border-beige-600 placeholder:text-beige-500"
           />
-          <select
-            value={language}
-            onChange={e => setLanguage(e.target.value)}
-            className="bg-beige-50 border border-beige-400 rounded-xl px-4 py-3 text-sm text-beige-800 outline-none"
-          >
-            <option>English</option>
-            <option>Hindi</option>
-            <option>French</option>
-            <option>Spanish</option>
-            <option>Japanese</option>
-          </select>
-          <button
-            onClick={handleStart}
-            disabled={loading}
-            className="bg-beige-900 text-beige-50 text-sm px-6 py-3 rounded-xl hover:bg-beige-800 transition-colors disabled:opacity-50"
-          >
-            {loading ? 'Starting...' : 'Start research'}
-          </button>
+          <div className="flex gap-3">
+            <select
+              value={language}
+              onChange={e => setLanguage(e.target.value)}
+              className="flex-1 sm:flex-none bg-beige-50 border border-beige-400 rounded-xl px-4 py-3 text-sm text-beige-800 outline-none"
+            >
+              <option>English</option>
+              <option>Hindi</option>
+              <option>French</option>
+              <option>Spanish</option>
+              <option>Japanese</option>
+            </select>
+            <button
+              onClick={handleStart}
+              disabled={loading}
+              className="bg-beige-900 text-beige-50 text-sm px-6 py-3 rounded-xl hover:bg-beige-800 transition-colors disabled:opacity-50 flex-shrink-0"
+            >
+              {loading ? 'Starting...' : 'Start research'}
+            </button>
+          </div>
         </div>
+        {error && <p className="text-xs text-red-600 mt-3">{error}</p>}
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-3 divide-x divide-beige-300">
+      <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-beige-300">
 
         {/* Recent runs */}
-        <div className="p-8">
+        <div className="p-4 sm:p-8">
           <p className="text-xs font-mono text-beige-500 tracking-widest uppercase mb-5">Recent runs</p>
           <div className="flex flex-col gap-3">
-            {[
-              { title: 'Impact of AI on jobs', meta: 'today · 8/10 · 4 sources' },
-              { title: 'Climate change 2025', meta: 'yesterday · 9/10 · 6 sources' },
-              { title: 'Remote work trends', meta: '2 days ago · 7/10 · 3 sources' },
-            ].map((item, i) => (
-              <div key={i} className="border border-beige-300 rounded-xl p-4 bg-beige-50 cursor-pointer hover:border-beige-500 transition-colors">
-                <p className="text-sm text-beige-900 mb-1">{item.title}</p>
-                <p className="text-xs font-mono text-beige-500">{item.meta}</p>
-              </div>
+            {runs.length === 0 && (
+              <p className="text-xs text-beige-500">No runs yet — start your first one above.</p>
+            )}
+            {runs.slice(0, 5).map((run) => (
+              <Link
+                key={run.thread_id}
+                to={`/output/${run.thread_id}`}
+                className="group relative border border-beige-300 rounded-xl p-4 bg-beige-50 cursor-pointer hover:border-beige-500 transition-colors"
+              >
+                <button
+                  onClick={(e) => handleDelete(e, run.thread_id)}
+                  aria-label="Delete run"
+                  className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center text-beige-400 hover:bg-beige-200 hover:text-beige-700 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                >
+                  ✕
+                </button>
+                <p className="text-sm text-beige-900 mb-1 pr-6">{run.topic}</p>
+                <p className="text-xs font-mono text-beige-500">
+                  {relativeDay(run.created_at)} · {run.score}/10 · {run.sources_count} sources
+                </p>
+              </Link>
             ))}
           </div>
           <div className="grid grid-cols-2 gap-3 mt-6">
             <div className="bg-beige-200 rounded-xl p-4">
-              <p className="font-playfair text-2xl text-beige-900">12</p>
+              <p className="font-playfair text-2xl text-beige-900">{totalRuns}</p>
               <p className="text-xs font-mono text-beige-600 mt-1">total runs</p>
             </div>
             <div className="bg-beige-200 rounded-xl p-4">
-              <p className="font-playfair text-2xl text-beige-900">8.1</p>
+              <p className="font-playfair text-2xl text-beige-900">{avgScore}</p>
               <p className="text-xs font-mono text-beige-600 mt-1">avg score</p>
             </div>
           </div>
         </div>
 
-        {/* Agents */}
-        <div className="p-8">
-          <p className="text-xs font-mono text-beige-500 tracking-widest uppercase mb-5">Your agents</p>
-          <div className="flex flex-col gap-2">
-            {[
-              { name: 'Researcher', desc: 'DuckDuckGo search', color: 'bg-emerald-50 text-emerald-700', icon: '🔍' },
-              { name: 'Summarizer', desc: 'condenses raw data', color: 'bg-blue-50 text-blue-700', icon: '📄' },
-              { name: 'Writer', desc: 'drafts the article', color: 'bg-amber-50 text-amber-700', icon: '✍️' },
-              { name: 'Critic', desc: 'scores + feedback', color: 'bg-purple-50 text-purple-700', icon: '⭐' },
-              { name: 'Fact checker', desc: 'Wikipedia verify', color: 'bg-emerald-50 text-emerald-700', icon: '✅' },
-              { name: 'Bias detector', desc: 'flags one-sidedness', color: 'bg-red-50 text-red-700', icon: '👁️' },
-              { name: 'Citation builder', desc: 'formats sources', color: 'bg-beige-200 text-beige-700', icon: '📚' },
-              { name: 'Translator', desc: 'multilingual output', color: 'bg-pink-50 text-pink-700', icon: '🌐' },
-            ].map((agent, i) => (
-              <div key={i} className="flex items-center gap-3 px-2 py-2 rounded-xl">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${agent.color}`}>
-                  {agent.icon}
-                </div>
-                <div>
-                  <p className="text-xs text-beige-800">{agent.name}</p>
-                  <p className="text-xs font-mono text-beige-500">{agent.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* How it works */}
-        <div className="p-8">
+        <div className="p-4 sm:p-8">
           <p className="text-xs font-mono text-beige-500 tracking-widest uppercase mb-5">How it works</p>
           <div className="flex flex-col gap-5">
             {[
               { n: '01', title: 'Enter your topic', desc: 'anything you want researched' },
               { n: '02', title: 'Agents run in sequence', desc: 'research → summarize → write → verify' },
-              { n: '03', title: 'Review the draft', desc: 'approve or reject with feedback' },
+              { n: '03', title: 'Review the draft', desc: 'approve, edit, or reject with feedback' },
               { n: '04', title: 'Get final output', desc: 'cited, fact-checked, translated' },
             ].map((step, i) => (
               <div key={i} className="flex gap-4">
