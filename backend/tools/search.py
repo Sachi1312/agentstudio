@@ -10,7 +10,7 @@ ARXIV_API = "http://export.arxiv.org/api/query"
 ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom"}
 
 def duckduckgo_search(query: str) -> str:
-    with DDGS() as ddgs:
+    with DDGS(timeout=15) as ddgs:
         results = ddgs.text(query, max_results=5)
         if not results:
             return "No results found."

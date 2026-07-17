@@ -13,6 +13,10 @@ llm = ChatOpenAI(
     openai_api_key=os.getenv("OPENROUTER_API_KEY"),
     openai_api_base="https://openrouter.ai/api/v1",
     stream_usage=True,
+    # Without this, a hung OpenRouter request never times out client-side,
+    # which stalls the whole graph run forever — it never completes or
+    # raises, so the /start concurrency slot never gets released either.
+    request_timeout=60,
 )
 
 _PREAMBLE_STARTS = ("here's", "here is", "below is", "sure,", "certainly", "i've revised", "this is a revised", "of course")

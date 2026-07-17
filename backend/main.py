@@ -144,7 +144,14 @@ async def _stream_graph(thread_id: str, stream_input, config: dict):
                 fut.result()
 
     try:
-        await asyncio.to_thread(worker)
+        # Per-call timeouts on the LLM/search clients handle the common case,
+        # but this is the backstop: if anything downstream still manages to
+        # hang (a retry loop, a library with no timeout of its own, etc.),
+        # this guarantees the run eventually raises instead of holding its
+        # concurrency slot (see MAX_CONCURRENT_RUNS) forever.
+        await asyncio.wait_for(asyncio.to_thread(worker), timeout=600)
+    except asyncio.TimeoutError:
+        raise Exception("Run timed out after 10 minutes — an agent call likely hung. Please try again.")
     finally:
         broadcast.unregister(thread_id)
 
