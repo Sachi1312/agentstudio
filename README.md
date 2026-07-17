@@ -2,7 +2,7 @@
 
 A multi-agent AI research system built on **LangGraph**, with a real-time streaming UI, human-in-the-loop review, and export to Markdown/PDF. Give it a topic, and eight specialist agents research, write, fact-check, bias-check, cite, and translate a full article — with a human able to approve, edit, or reject the draft mid-pipeline.
 
-**Live demo:** [agentstudio-yhm9.onrender.com](https://agentstudio-yhm9.onrender.com) *(hosted on Render's free tier — the first request after a period of inactivity may take 30-60s to wake up)*
+**Live demo:** [agentstudio-yhm9.onrender.com](https://agentstudio-yhm9.onrender.com) 
 
 
 
@@ -11,7 +11,7 @@ A multi-agent AI research system built on **LangGraph**, with a real-time stream
 ## Demo
 
 **Home — start a run, browse history**
-![Home page](docs/screenshots/homepage.jpeg)
+![Home page](docs/screenshots/homepage.png)
 
 **Live run — agents working through the pipeline**
 ![Agents in progress](docs/screenshots/agentsworking.jpeg)
@@ -20,7 +20,7 @@ A multi-agent AI research system built on **LangGraph**, with a real-time stream
 ![Draft awaiting review](docs/screenshots/draft1.jpeg)
 
 **Rejecting with feedback that goes straight back to the Writer**
-![Reject with feedback](docs/screenshots/giving feedback.jpeg)
+![Reject with feedback](docs/screenshots/givingfeedback.jpeg)
 
 **Final output — scored, fact-checked, cited**
 ![Final article output](docs/screenshots/final.jpeg)
