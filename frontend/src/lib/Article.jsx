@@ -1,15 +1,40 @@
+import { Children, isValidElement } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+
+// Native <ol>/<ul> markers (::marker, list-style) are CSS pseudo-elements —
+// html2canvas (used for PDF export) doesn't reliably capture those, which
+// is what caused numbered-list markers to render detached/misaligned in
+// the PDF. Rendering the marker as a real DOM text node in a flex row next
+// to the item content sidesteps that entirely, and looks identical on the
+// live site too.
+function buildList(ordered, compact = false) {
+  return function List({ children }) {
+    const items = Children.toArray(children).filter(isValidElement)
+    return (
+      <div className={compact ? 'mb-3 space-y-1.5' : 'mb-5 space-y-2'}>
+        {items.map((item, i) => (
+          <div key={i} className={`flex gap-2 ${compact ? 'text-xs text-beige-600' : 'text-sm text-beige-800'}`}>
+            <span className="flex-shrink-0 text-beige-500 font-mono text-xs mt-0.5">
+              {ordered ? `${i + 1}.` : '•'}
+            </span>
+            <span className="leading-relaxed">{item.props.children}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+}
 
 const components = {
   p: (props) => <p className="mb-5 text-sm text-beige-800 leading-relaxed" {...props} />,
   strong: (props) => <strong className="font-semibold text-beige-900" {...props} />,
   em: (props) => <em className="italic" {...props} />,
-  h1: (props) => <h2 className="font-playfair text-xl text-beige-900 mt-8 mb-3" {...props} />,
-  h2: (props) => <h2 className="font-playfair text-xl text-beige-900 mt-8 mb-3" {...props} />,
-  h3: (props) => <h3 className="font-playfair text-lg text-beige-900 mt-6 mb-2" {...props} />,
-  ul: (props) => <ul className="list-disc pl-5 mb-5 space-y-1 text-sm text-beige-800" {...props} />,
-  ol: (props) => <ol className="list-decimal pl-5 mb-5 space-y-1 text-sm text-beige-800" {...props} />,
+  h1: (props) => <h2 className="font-playfair font-bold text-xl text-beige-900 mt-8 mb-3" {...props} />,
+  h2: (props) => <h2 className="font-playfair font-bold text-xl text-beige-900 mt-8 mb-3" {...props} />,
+  h3: (props) => <h3 className="font-playfair font-bold text-lg text-beige-900 mt-6 mb-2" {...props} />,
+  ul: buildList(false),
+  ol: buildList(true),
   code: (props) => <code className="bg-beige-200 text-beige-800 px-1 py-0.5 rounded text-xs font-mono" {...props} />,
   blockquote: (props) => <blockquote className="border-l-2 border-beige-400 pl-4 italic text-beige-600 mb-5" {...props} />,
   table: (props) => (
@@ -26,11 +51,11 @@ const compactComponents = {
   ...components,
   p: (props) => <p className="mb-3 text-xs text-beige-600 leading-relaxed" {...props} />,
   strong: (props) => <strong className="font-semibold text-beige-800" {...props} />,
-  ul: (props) => <ul className="list-disc pl-4 mb-3 space-y-1 text-xs text-beige-600" {...props} />,
-  ol: (props) => <ol className="list-decimal pl-4 mb-3 space-y-1 text-xs text-beige-600" {...props} />,
-  h1: (props) => <h2 className="font-playfair text-sm text-beige-900 mt-4 mb-2" {...props} />,
-  h2: (props) => <h2 className="font-playfair text-sm text-beige-900 mt-4 mb-2" {...props} />,
-  h3: (props) => <h3 className="font-playfair text-sm text-beige-900 mt-3 mb-1.5" {...props} />,
+  ul: buildList(false, true),
+  ol: buildList(true, true),
+  h1: (props) => <h2 className="font-playfair font-bold text-sm text-beige-900 mt-4 mb-2" {...props} />,
+  h2: (props) => <h2 className="font-playfair font-bold text-sm text-beige-900 mt-4 mb-2" {...props} />,
+  h3: (props) => <h3 className="font-playfair font-bold text-sm text-beige-900 mt-3 mb-1.5" {...props} />,
 }
 
 // fact_check/bias_report are also LLM-written Markdown (the fact checker's

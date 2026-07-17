@@ -13,4 +13,8 @@ COPY backend/ backend/
 COPY --from=frontend-build /app/frontend/dist frontend/dist
 
 EXPOSE 8000
-CMD ["python", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Railway/Render/Fly assign the port dynamically via $PORT and route traffic
+# to whatever that is — a hardcoded --port 8000 would silently not receive
+# any traffic on those platforms. Shell form (not exec/JSON-array form) so
+# $PORT actually gets substituted; falls back to 8000 for local `docker run`.
+CMD python -m uvicorn backend.main:app --host 0.0.0.0 --port ${PORT:-8000}
