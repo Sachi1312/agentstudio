@@ -287,6 +287,7 @@ async def send_update(thread_id: str, data: dict):
 _frontend_dist = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 if os.path.isdir(_frontend_dist):
     @app.get("/{full_path:path}")
+    @app.head("/{full_path:path}")
     async def serve_spa(full_path: str):
         # A plain StaticFiles(html=True) mount only serves index.html for
         # the exact "/" path — directly loading or refreshing a client-side
