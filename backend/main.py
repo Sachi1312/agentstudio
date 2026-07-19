@@ -283,7 +283,16 @@ async def websocket_endpoint(websocket: WebSocket, thread_id: str):
 async def send_update(thread_id: str, data: dict):
     ws = active_connections.get(thread_id)
     if ws:
-        await ws.send_text(json.dumps(data))
+        try:
+            await ws.send_text(json.dumps(data))
+        except Exception:
+            # The socket can die between us reading active_connections and
+            # actually sending (tab closed, network drop) — a raise here
+            # used to escape run_graph/resume_graph's own error handler
+            # (which calls send_update to report the error), skipping
+            # _release_run_slot() entirely and leaking a concurrency slot
+            # forever. Nobody's listening either way, so just drop it.
+            active_connections.pop(thread_id, None)
     else:
         pending_messages.setdefault(thread_id, []).append(data)
 

@@ -48,7 +48,12 @@ export default function Run() {
   const [isEditing, setIsEditing] = useState(false)
   const [editedDraft, setEditedDraft] = useState('')
 
-  const displayText = streamingDraft || draft
+  // While human review is open, editedDraft (seeded from draft, updated as
+  // the user types) is the source of truth — rendering `draft` instead here
+  // made the Preview toggle show the original text, so edits looked like
+  // they'd been discarded even though they were still held in state and
+  // would be sent on Approve.
+  const displayText = humanReview ? editedDraft : (streamingDraft || draft)
   const wordCount = displayText ? displayText.split(/\s+/).filter(Boolean).length : 0
 
   useEffect(() => {
